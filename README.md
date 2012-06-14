@@ -64,10 +64,10 @@ second argument to `after` and `before` indicate if that function should
 return Monad object or function so you can add multiply before and after
 functions.
 
-
-========
 License
+========
 
-Copyright (C) 2012 Jakub Jankiewicz &gt;<http://jcubic.pl>&lt;
+Copyright (C) 2012 Jakub Jankiewicz &lt;<http://jcubic.pl>&gt;
+
 Licensed under [GNU GPL Version 3 license](http://www.gnu.org/licenses/gpl.html)
 
