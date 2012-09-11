@@ -15,16 +15,15 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-function M(object) {
-    var m = new M.init();
-	m.__original_object = {};
+function Monad(object) {
+    var m = new Monad.init();
+	m.__original_object = object;
+    m.prototype = object;
     if (typeof object == 'object') {
         for (var name in object) {
             if (object.hasOwnProperty(name) && name != 'add' || name != 'get') {
                 if (typeof object[name] == 'function') {
                     m.add(name, object[name]);
-                } else {
-				    m.__original_object[name] = object[name];
                 }
             }
         }
@@ -32,37 +31,73 @@ function M(object) {
     return m;
 }
 
-M.init = function() {
+Monad.install = function() {
+    Object.prototype.monad = function() {
+        return Monad(this);
+    };
+};
+
+Monad.init = function() {
     var self = this;
     function check_name(name) {
         if (name == 'add' || name == 'get' || name == '__original_object') {
             throw "You can't overwrite '" + name + "' method";
         }
     }
+    function move_properties(from, to) {
+        for (var name in from) {
+            if (from.hasOwnProperty(name)) {
+                to[name] = from[name]
+            }
+        }
+    }
+    function toArray(array) {
+        return Array.prototype.splice.call(array, 0);
+    }
     self.add = function(name, fun) {
         check_name(name);
         self[name] = function() {
             var ret = fun.apply(self.__original_object,
                                 Array.prototype.splice.call(arguments, 0));
-            return ret != self.__original_object ? ret : self;
+            if (typeof ret == 'undefined') {
+                return self;
+            } else {
+                return ret != self.__original_object ? ret : self;
+            }
         };
-        self[name].before = function(fun, return_object) {
+        self[name].before = function(fun) {
             var __f = self[name];
             self[name] = function() {
-                var ret = __f.apply(self,
-				     [fun.apply(self, Array.prototype.splice.call(arguments, 0))]);
+                var ret = __f.apply(self.__original_object,
+				     [fun.apply(self.__original_object, toArray(arguments))]);
                 return ret ? ret : self;
             };
-            return return_object ? self : self[name];
+            move_properties(__f, self[name]);
+            return self;
         };
-        self[name].after = function(fun, return_object) {
+        self[name].when = function(condition) {
             var __f = self[name];
             self[name] = function() {
-                var ret = fun.apply(self,
-                     [__f.apply(self, Array.prototype.splice.call(arguments, 0))]);
+                var args = toArray(arguments);
+                if (condition.apply(self.__original_object, args) !== false) {
+                    var ret = __f.apply(self.__original_object, args);
+                    return ret ? ret : self;
+                } else {
+                    return self;
+                }
+            };
+            move_properties(__f, self[name]);
+            return self;
+        };
+        self[name].after = function(fun) {
+            var __f = self[name];
+            self[name] = function() {
+                var ret = fun.apply(self.__original_object,
+                     [__f.apply(self.__original_object, toArray(arguments))]);
                 return ret ? ret : self;
             };
-            return return_object ? self : self[name];
+            move_properties(__f, self[name]);
+            return self;
         };
         self[name].object = function() {
             return self;
