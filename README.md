@@ -1,56 +1,55 @@
-monad.js
-========
+# Monadic - JavaScript micro library
 
-Very simple script that, I think implement a monad in Javascript 
-with 2 aditional methods to modify object methods
+Very simple library that, I think implement a monad in Javascript and
+add some funtionaly to functions that belong to orignal object wraped by
+Monadic Monad.
 
+Functions wraped by Monadic, are automaticaly chainable if they don't return
+a value. Functions are executed in the context of orignal object. Functions
+that modify an object modify local copy of that object that can be retrieve
+at the end of monadic chain.
 
-Usage
-========
+# Usage
 
-Monad function wrap you original object and add new methods `add` and `get`
+Monadic function wrap you original object and add new methods `add` and `get`
 
 * add - append new function to monad
 * get - return original object
 
 ```javascript
 
-var o = Monad({
+var o = {
     baz: 2,
     foo: function(a) {
         this.baz += a;
-        return this;
     },
     bar: function(a) {
         this.baz = a * a;
-        return this;
     }
-});
+};
 
-console.log(o.bar(10).foo(10).add('baz', function() {
+Monadic(o).bar(10).foo(10).add('baz', function() {
     this.baz += 10;
     return this;
-}).baz().get().baz);
+}).baz().get().baz;
+
 ```
+you will get 120. In orignal o object baz will still equal 2.
 
-you will get 120.
+## Add function to Object prototype
 
-this is always your original object. If you return that object, then your
-function will return Monad object so you can chain your functions.
-
-# Add function to Object prototype
-
-You can add monad method to prototype of the Object using
+You can add `monadic` method to Object prototype using:
 
 ```javascript
 Monad.install();
 ```
 
-so all objects will have monad method.
+so all objects will have `monadic` method that will create Monadic Monad from
+that object.
 
 # Monadic Functions API
 
-Your wrapped functions inside monad have 3 methods:
+Your wrapped functions inside Monadic have 3 methods:
 
 * before(function) - value from your before function is is passed to original function
 * after(function) - argument to your after function is the value of returned by original function
@@ -59,7 +58,7 @@ Your wrapped functions inside monad have 3 methods:
 You can chain these methods
 
 ```javascript
-console = console.monad().log.when(function() {
+console = console.monadic(false).log.when(function() {
     if (!debug) {
         return false;
     }
@@ -71,24 +70,33 @@ console = console.monad().log.when(function() {
 });
 ```
 
+When you pass false to monadic method it will keep context of orignal object
+(it will not be real Monad then), so you can pass `log` as callback.
+
+```javascript
+[1,2,3,4].forEach(console.monadic(false).log);
+```
+
+forEach will return some shit, since it pass more then one argument to callback functions
+
 
 In this example `foo` function is modified after it return it's value so
 `foo` is always returning 10. Argument to `after` function is a value returned
 by a function.
 
 ```javascript
-console.log(Monad({ foo: function(a) { return 10/a; } }).foo.before(function(a) {
+Monadic({ foo: function(a) { return 10/a; } }).foo.before(function(a) {
     if (a == 0) {
         throw 'You should not divide by 0, you know';
     } else {
         return a;
     }
-}).foo(0));
+}).foo(0);
 ```
 
+**NOTE:** fuction methods are not creating new Monad so they modify original, current Monad object
 
-License
-========
+# License
 
 Copyright (C) 2012 Jakub Jankiewicz &lt;<http://jcubic.pl>&gt;
 
