@@ -34,6 +34,35 @@ var Monadic = (function() {
 
     Monadic.init = function(object, monad) {
         var self = this;
+
+        self.get = function() {
+            return object;
+        };
+
+        function object_from_proto(object) {
+            var result = {};
+            var arr = Object.getOwnPropertyNames(object.constructor.prototype);
+            for (var i=arr.length;i--;) {
+                if (typeof object.constructor.prototype[arr[i]] == 'function') {
+                    result[arr[i]] = object.constructor.prototype[arr[i]];
+                }
+            }
+            return result;
+        }
+        function add_all(object) {
+            for (var name in object) {
+                if (!(name == 'add' || name == 'get')) {
+                    if (typeof object[name] == 'function') {
+                        self.add(name, object[name]);
+                    }
+                }
+            }
+        }
+
+        self.extend = function(object) {
+            add_all(object.constructor == Array ? object_from_proto(object) : object);
+        };
+
         self.add = function(name, fun) {
             if (name == 'get' || name == 'add') {
                 throw "You can't wrap " + name + " function";
@@ -82,27 +111,22 @@ var Monadic = (function() {
             };
             return self;
         };
-        self.get = function() {
-            return object;
-        };
-        for (var name in object) {
-            if (!(name == 'add' || name == 'get')) {
-                if (typeof object[name] == 'function') {
-                    self.add(name, object[name]);
-                }
-            }
-        }
+        self.extend(object);
     };
 
     function clone(object) {
         if (typeof object != 'object' || object === null) {
             return object;
         }
-        var new_object = {};
-        for (var name in object) {
-            new_object[name] = object[name];
+        if (object.constructor == Array) {
+            return object.slice();
+        } else {   
+            var new_object = {};
+            for (var name in object) {
+                new_object[name] = object[name];
+            }
+            return new_object;
         }
-        return new_object;
     }
 
     function move_properties(from, to) {
@@ -114,7 +138,7 @@ var Monadic = (function() {
     }
 
     function toArray(array) {
-        return Array.prototype.splice.call(array, 0);
+        return Array.prototype.slice.call(array, 0);
     }
     
     return Monadic;
