@@ -49,10 +49,13 @@ that object.
 
 # Monadic Functions API
 
-Your wrapped functions inside Monadic have 3 methods:
+Your wrapped functions inside Monadic have these methods (methods that accept a function
+will return new function to get monadic object you need to call self).
 
 * before(function) - value from your before function is is passed to original function
 * after(function) - argument to your after function is the value of returned by original function
+* limit(number) - make a function accept only fixed number of arguments (more arguments are ignored)
+* self() - return monadic object
 * when(function) - if function return false the origal function is not executed
 
 You can chain these methods
@@ -91,7 +94,7 @@ Monadic({ foo: function(a) { return 10/a; } }).foo.before(function(a) {
     } else {
         return a;
     }
-}).foo(0);
+}).self().foo(0);
 ```
 
 **NOTE:** fuction methods are not creating new Monad so they modify original, current Monad object

@@ -67,6 +67,7 @@ var Monadic = (function() {
             if (name == 'get' || name == 'add') {
                 throw "You can't wrap " + name + " function";
             }
+            var original = fun;
             self[name] = function() {
                 var ret = fun.apply(object, toArray(arguments));
                 if (ret === object || !ret instanceof Monadic.init || typeof ret == 'undefined') {
@@ -75,6 +76,7 @@ var Monadic = (function() {
                     return ret;
                 }
             };
+            // execute function before method
             self[name].before = function(fun) {
                 var method = self[name];
                 self[name] = function() {
@@ -83,36 +85,66 @@ var Monadic = (function() {
                     return ret ? ret : monad === false ? self : Monadic(object, monad);
                 };
                 move_properties(method, self[name]);
+                return self[name];
+            };
+            // set limit of arguments to a function - useful for forEach and log
+            self[name].limit = function(args) {
+                var args = +args;
+                if (args < 0) {
+                    throw new Error("limit Argument can't be smaller then 0");
+                }
+                var method = self[name];
+                self[name] = function() {
+                    var args = Array.prototype.slice.call(arguments, 0, args);
+                    return ret(method.apply(object, args), monad);
+                };
+                move_properties(method, self[name]);
+                return self[name];
+            };
+            // return object from which the function came from
+            self[name].self = function() {
                 return self;
             };
+            // call a function if condition function return true
             self[name].when = function(condition) {
                 var method = self[name];
                 self[name] = function() {
                     var args = toArray(arguments);
                     if (condition.apply(object, args) !== false) {
-                        var ret = method.apply(object, args);
-                        return ret ? ret : monad === false ? self : Monadic(object, monad);
+                        return ret(method.apply(object, args), monad);
                     } else {
                         return monad === false ? self : Monadic(object, monad);
                     }
                 };
                 move_properties(method, self[name]);
-                return self;
+                return self[name];
             };
+            // function that execute after a function
             self[name].after = function(fun) {
                 var method = self[name];
                 self[name] = function() {
-                    var ret = fun.apply(object,
-                         [method.apply(object, toArray(arguments))]);
-                    return ret ? ret : monad === false ? self : Monadic(object, monad);
+                    return ret(fun.apply(object,
+                                         [method.apply(object, toArray(arguments))]),
+                               monad);
                 };
                 move_properties(method, self[name]);
-                return self;
+                return self[name];
             };
-            return self;
+            return self; // add
         };
         self.extend(object);
     };
+    // return a value if function return undefined (usualy don't return anything)
+    // new or same Monadic object depend on monad argument
+    function ret(value, monad) {
+        if (typeof value !== 'undefined') {
+            return value;
+        } else if (monad === false) {
+            return self;
+        } else {
+            return Monadic(object, monad);
+        }
+    }
 
     function clone(object) {
         if (typeof object != 'object' || object === null) {
@@ -128,7 +160,7 @@ var Monadic = (function() {
             return new_object;
         }
     }
-
+    // move properties from one object to another use to change methods on functions
     function move_properties(from, to) {
         for (var name in from) {
             if (from.hasOwnProperty(name)) {
