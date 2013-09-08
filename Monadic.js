@@ -80,9 +80,12 @@ var Monadic = (function() {
             self[name].before = function(fun) {
                 var method = self[name];
                 self[name] = function() {
-                    var ret = method.apply(object,
-				         [fun.apply(object, toArray(arguments))]);
-                    return ret ? ret : monad === false ? self : Monadic(object, monad);
+                    var result = fun.apply(object, toArray(arguments));
+                    if (result.length) {
+                        return ret(method.apply(object, result));
+                    } else {
+                        return ret(method.apply(object, [result]));
+                    }
                 };
                 move_properties(method, self[name]);
                 return self[name];
@@ -94,12 +97,9 @@ var Monadic = (function() {
                     throw new Error("limit Argument can't be smaller then 0");
                 }
                 var method = self[name];
-                self[name] = function() {
-                    var args = Array.prototype.slice.call(arguments, 0, args);
-                    return ret(method.apply(object, args), monad);
-                };
-                move_properties(method, self[name]);
-                return self[name];
+                return self[name].before(function() {
+                    return Array.prototype.slice.apply(arguments, [0, args]);
+                });
             };
             // return object from which the function came from
             self[name].self = function() {
