@@ -18,11 +18,18 @@
 
 var Monadic = (function() {
 
-    function Monadic(object, monad) {
-        if (monad === false) {
-            return new Monadic.init(object, monad);
+    function Monadic(object, options) {
+        options = options || {};
+        if (options.monad === undefined) {
+            options.monad = true;
+        }
+        if (options.curry === undefined) {
+            options.curry = true;
+        }
+        if (!options.monad) {
+            return new Monadic.init(object, options);
         } else {
-            return new Monadic.init(clone(object), monad);
+            return new Monadic.init(clone(object), options);
         }
     }
 
@@ -32,7 +39,8 @@ var Monadic = (function() {
         };
     };
 
-    Monadic.init = function(object, monad) {
+    Monadic.init = function(object, options) {
+        this.object = object;
         var self = this;
 
         self.get = function() {
@@ -49,9 +57,14 @@ var Monadic = (function() {
             }
             return result;
         }
+        
+        function valid_name(name) {
+            return !(name == 'get' || name == 'add');
+        }
+        
         function add_all(object) {
             for (var name in object) {
-                if (!(name == 'add' || name == 'get')) {
+                if (valid_name(name)) {
                     if (typeof object[name] == 'function') {
                         self.add(name, object[name]);
                     }
@@ -59,22 +72,18 @@ var Monadic = (function() {
             }
         }
 
-        self.extend = function(object) {
-            add_all(object.constructor == Array ? object_from_proto(object) : object);
-        };
-
         self.add = function(name, fun) {
-            if (name == 'get' || name == 'add') {
+            if (!valid_name(name)) {
                 throw "You can't wrap " + name + " function";
             }
             var original = fun;
             self[name] = function() {
                 var ret = fun.apply(object, toArray(arguments));
                 if (ret === object || !ret instanceof Monadic.init || typeof ret == 'undefined') {
-                    if (monad === false) {
+                    if (!options.monad) {
                         return self;
                     } else {
-                        var new_monad = Monadic(object, monad);
+                        var new_monad = Monadic(object, options);
                         move_functions(self, new_monad);
                         return new_monad;
                     }
@@ -82,15 +91,16 @@ var Monadic = (function() {
                     return ret;
                 }
             };
+            
             // execute function before method
             self[name].before = function(fun) {
                 var method = self[name];
                 self[name] = function() {
                     var result = fun.apply(object, toArray(arguments));
                     if (result.length) {
-                        return ret(method.apply(object, result));
+                        return ret(method.apply(object, result), options.monad);
                     } else {
-                        return ret(method.apply(object, [result]));
+                        return ret(method.apply(object, [result]), options.monad);
                     }
                 };
                 move_properties(method, self[name]);
@@ -117,9 +127,9 @@ var Monadic = (function() {
                 self[name] = function() {
                     var args = toArray(arguments);
                     if (condition.apply(object, args) !== false) {
-                        return ret(method.apply(object, args), monad);
+                        return ret(method.apply(object, args), options.monad);
                     } else {
-                        return monad === false ? self : Monadic(object, monad);
+                        return !options.monad ? self : Monadic(object, options);
                     }
                 };
                 move_properties(method, self[name]);
@@ -131,14 +141,14 @@ var Monadic = (function() {
                 self[name] = function() {
                     return ret(fun.apply(object,
                                          [method.apply(object, toArray(arguments))]),
-                               monad);
+                               options.monad);
                 };
                 move_properties(method, self[name]);
                 return self[name];
             };
             return self; // add
         };
-        self.extend(object);
+        add_all(object.constructor == Array ? object_from_proto(object) : object);
     };
     // return a value if function return undefined (usualy don't return anything)
     // new or same Monadic object depend on monad argument

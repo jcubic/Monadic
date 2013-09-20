@@ -61,7 +61,7 @@ will return new function to get monadic object you need to call self).
 You can chain these methods
 
 ```javascript
-console = console.monadic(false).log.when(function() {
+console = console.monadic({monad: false}).log.when(function() {
     if (!debug) {
         return false;
     }
@@ -78,7 +78,7 @@ it will not create new object each time you call a method
 (it will not be real Monad then), so you can pass `log` as callback.
 
 ```javascript
-[1,2,3,4].forEach(console.monadic(false).log.limit(1));
+[1,2,3,4].forEach(console.monadic({monad: false}).log.limit(1));
 ```
 
 In this example `foo` function is modified after it return it's value so
