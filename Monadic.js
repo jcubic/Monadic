@@ -71,7 +71,13 @@ var Monadic = (function() {
             self[name] = function() {
                 var ret = fun.apply(object, toArray(arguments));
                 if (ret === object || !ret instanceof Monadic.init || typeof ret == 'undefined') {
-                    return monad === false ? self : Monadic(object, monad);
+                    if (monad === false) {
+                        return self;
+                    } else {
+                        var new_monad = Monadic(object, monad);
+                        move_functions(self, new_monad);
+                        return new_monad;
+                    }
                 } else {
                     return ret;
                 }
@@ -146,7 +152,7 @@ var Monadic = (function() {
         }
     }
 
-    function clone(object) {
+    function clone(object, deep) {
         if (typeof object != 'object' || object === null) {
             return object;
         }
@@ -168,9 +174,21 @@ var Monadic = (function() {
             }
         }
     }
+    
+    function move_functions(from, to) {
+        for (var name in from) {
+            if (from.hasOwnProperty(name) && typeof from[name] == 'function') {
+                to[name] = from[name]
+            }
+        }
+    }
+
+    function slice(array, n) {
+        return Array.prototype.slice.call(array, n);
+    }
 
     function toArray(array) {
-        return Array.prototype.slice.call(array, 0);
+        return slice(array, 0);
     }
     
     return Monadic;
