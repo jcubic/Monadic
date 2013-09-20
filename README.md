@@ -73,15 +73,13 @@ console = console.monadic(false).log.when(function() {
 });
 ```
 
-When you pass false to monadic method it will keep context of orignal object
+When you pass false to monadic method it will keep context of orignal object,
+it will not create new object each time you call a method
 (it will not be real Monad then), so you can pass `log` as callback.
 
 ```javascript
-[1,2,3,4].forEach(console.monadic(false).log);
+[1,2,3,4].forEach(console.monadic(false).log.limit(1));
 ```
-
-forEach will return some shit, since it pass more then one argument to callback functions
-
 
 In this example `foo` function is modified after it return it's value so
 `foo` is always returning 10. Argument to `after` function is a value returned
